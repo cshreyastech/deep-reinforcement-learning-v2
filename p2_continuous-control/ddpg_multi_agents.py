@@ -9,13 +9,13 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 
-BUFFER_SIZE = int(1e5)  # replay buffer size
+BUFFER_SIZE = int(1e6)  # replay buffer size
 BATCH_SIZE = 128        # minibatch size
 GAMMA = 0.99            # discount factor
 TAU = 1e-3              # for soft update of target parameters
 LR_ACTOR = 1e-4         # learning rate of the actor 
-LR_CRITIC = 1e-3        # learning rate of the critic
-WEIGHT_DECAY = 0        # L2 weight decay
+LR_CRITIC = 1e-4        # learning rate of the critic
+WEIGHT_DECAY = 0.0001        # L2 weight decay
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -133,6 +133,10 @@ class Agents():
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(tau*local_param.data + (1.0-tau)*target_param.data)
 
+    def print_setting(self):
+        print('\rBUFFER_SIZE: {}\tBATCH_SIZE: {}\tGAMMA: {}\tTAUE: {}\tLR_ACTOR: {}\tLR_CRITIC: {}\tWEIGHT_DECAY: {}' .format
+              (BUFFER_SIZE, BATCH_SIZE, GAMMA, TAU, LR_ACTOR, LR_CRITIC, WEIGHT_DECAY))
+        
 class OUNoise:
     """Ornstein-Uhlenbeck process."""
 
