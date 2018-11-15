@@ -11,6 +11,14 @@ class TennisEnv:
         
         # reset the environment
         self.env_info = self.env.reset(train_mode=True)[self.brain_name]
+        #print('self.env_info: ', self.env_info)
+        """
+        brain: ['brain_name', 'camera_resolutions',
+           'num_stacked_vector_observations', 'number_visual_observations',
+           'vector_action_descriptions', 'vector_action_space_size',
+           'vector_action_space_type', 'vector_observation_space_size',
+           'vector_observation_space_type']]
+        """
         
         # number of agents 
         self.num_agents = len(self.env_info.agents)

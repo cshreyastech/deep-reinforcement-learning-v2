@@ -1,7 +1,7 @@
 # main function that sets up environments
 # perform training loop
 
-import envs
+from Unity_Env_wrapper import TennisEnv
 from buffer import ReplayBuffer
 from maddpg import MADDPG
 import torch
@@ -9,6 +9,7 @@ import numpy as np
 from tensorboardX import SummaryWriter
 import os
 from utilities import transpose_list, transpose_to_tensor
+from collections import deque
 
 def seeding(seed=1):
     np.random.seed(seed)
@@ -17,7 +18,7 @@ def seeding(seed=1):
 def main():
     seeding()
     # number of parallel agents
-    parallel_envs = 4
+    # parallel_envs = 4
     # number of training episodes.
     # change this to higher number to experiment. say 30000.
     number_of_episodes = 1000
@@ -25,34 +26,36 @@ def main():
     batchsize = 1000
     # how many episodes to save policy and gif
     save_interval = 1000
-    t = 0
+    scores_deque = deque(maxlen=100)
+    scores = []
     
     # amplitude of OU noise
     # this slowly decreases to 0
     noise = 2
     noise_reduction = 0.9999
-
+    BUFFER_SIZE = int(1e6) # replay buffer size
+    
     # how many episodes before update
-    episode_per_update = 2 * parallel_envs
+    #episode_per_update = 2 * parallel_envs
 
     log_path = os.getcwd()+"/log"
     model_dir= os.getcwd()+"/model_dir"
     
     os.makedirs(model_dir, exist_ok=True)
 
-    torch.set_num_threads(parallel_envs)
-    env = envs.make_parallel_env(parallel_envs)
+    #torch.set_num_threads(parallel_envs)
+    #env = envs.make_parallel_env(parallel_envs)
     
-    # keep 5000 episodes worth of replay
-    buffer = ReplayBuffer(int(5000*episode_length))
+    buffer = ReplayBuffer(BUFFER_SIZE)
     
     # initialize policy and critic
     maddpg = MADDPG()
     logger = SummaryWriter(log_dir=log_path)
-    agent0_reward = []
-    agent1_reward = []
-    agent2_reward = []
+    #agent0_reward = []
+    #agent1_reward = []
+    #agent2_reward = []
 
+    """
     # training loop
     # show progressbar
     import progressbar as pb
@@ -160,6 +163,6 @@ def main():
     env.close()
     logger.close()
     timer.finish()
-
+    """
 if __name__=='__main__':
     main()
