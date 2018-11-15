@@ -1,5 +1,10 @@
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+from collections import deque
+import random
+import torch
+import torch.nn.functional as F
+import torch.optim as optim
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class ReplayBuffer:
     """Fixed-size buffer to store experience tuples."""
