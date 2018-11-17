@@ -24,6 +24,12 @@ class TennisEnv:
         self.num_agents = len(self.env_info.agents)
         print('Number of agents:', self.num_agents)
         
+        """
+        
+        env_info: ['agents', 'local_done', 'max_reached', 'memories',
+                  'previous_text_actions', 'previous_vector_actions', 'rewards',
+                  'text_observations', 'vector_observations', 'visual_observations']
+        """
         # size of each action
         self.action_size = self.brain.vector_action_space_size
         print('Size of each action:', self.action_size)
@@ -34,6 +40,8 @@ class TennisEnv:
         self.state_size = self.states.shape[1]
         print('Size of each state:', self.state_size)
         
+    def reset(self):
+        self.noise.reset()
         
     def close(self):
         self.env.close()

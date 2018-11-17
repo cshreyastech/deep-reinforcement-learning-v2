@@ -1,7 +1,7 @@
 # individual network settings for each actor + critic pair
 # see networkforall for details
 
-from model import Actor, Critic
+from network import Network
 from utilities import hard_update, gumbel_softmax, onehot_from_logits
 from torch.optim import Adam
 import torch
@@ -15,15 +15,16 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #device = 'cpu'
 
 class DDPGAgent:
-    def __init__(self, in_actor, out_actor, in_critic, out_critic, lr_actor=1.0e-2, lr_critic=1.0e-2):
+    def __init__(self, in_actor, hidden_in_actor, hidden_out_actor, out_actor, in_critic, 
+                 hidden_in_critic, hidden_out_critic, lr_actor=1.0e-2, lr_critic=1.0e-2):
         super(DDPGAgent, self).__init__()
 
-        self.actor = Actor(in_actor, out_actor).to(device)
-        self.critic = Critic(in_critic, out_critic).to(device)
-        self.target_actor = Actor(in_actor, out_actor).to(device)
-        self.target_critic = Critic(in_critic, out_critic).to(device)
+        self.actor = Network(in_actor, hidden_in_actor, hidden_out_actor, out_actor, actor=True).to(device)
+        self.critic = Network(in_critic, hidden_in_critic, hidden_out_critic, 1).to(device)
+        self.target_actor = Network(in_actor, hidden_in_actor, hidden_out_actor, out_actor, actor=True).to(device)
+        self.target_critic = Network(in_critic, hidden_in_critic, hidden_out_critic, 1).to(device)
 
-        self.noise = OUNoise(out_actor, scale=1.0 )
+        self.noise = OUNoise(out_actor, scale=1.0)
 
         
         # initialize targets same as original networks

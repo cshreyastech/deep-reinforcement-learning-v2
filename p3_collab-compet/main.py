@@ -1,7 +1,7 @@
 # main function that sets up environments
 # perform training loop
 
-from Unity_Env_wrapper import TennisEnv
+from unityagents import UnityEnvironment
 from buffer import ReplayBuffer
 from maddpg import MADDPG
 import torch
@@ -21,9 +21,16 @@ def main():
     # parallel_envs = 4
     # number of training episodes.
     # change this to higher number to experiment. say 30000.
-    number_of_episodes = 1000
-    episode_length = 80
-    batchsize = 1000
+    
+    env = UnityEnvironment(file_name="/codebase/deep-reinforcement-learning-v2/p3_collab-compet/Tennis_Linux/Tennis.x86_64")
+    # get the default brain
+    brain_name = env.brain_names[0]
+    brain = env.brains[brain_name]
+
+
+    number_of_episodes = 1
+    episode_length = 10
+    batchsize = 8 #1000
     # how many episodes to save policy and gif
     save_interval = 1000
     scores_deque = deque(maxlen=100)
@@ -33,11 +40,18 @@ def main():
     # this slowly decreases to 0
     noise = 2
     noise_reduction = 0.9999
-    BUFFER_SIZE = int(1e6) # replay buffer size
+    #BUFFER_SIZE = int(1e5) # replay buffer size
+    BUFFER_SIZE = int(10)
     
     # how many episodes before update
     #episode_per_update = 2 * parallel_envs
 
+    env_info = env.reset(train_mode=True)[brain_name]
+    states = env_info.vector_observations
+    print('states.shape', states.shape)
+    num_agents, num_spaces = states.shape
+    print('num_agents: ', num_agents, ', num_spaces: ', num_spaces)
+        
     log_path = os.getcwd()+"/log"
     model_dir= os.getcwd()+"/model_dir"
     
@@ -49,13 +63,12 @@ def main():
     buffer = ReplayBuffer(BUFFER_SIZE)
     
     # initialize policy and critic
-    maddpg = MADDPG()
+    maddpg = MADDPG(num_agents, num_spaces)
     logger = SummaryWriter(log_dir=log_path)
     #agent0_reward = []
     #agent1_reward = []
     #agent2_reward = []
 
-    """
     # training loop
     # show progressbar
     import progressbar as pb
@@ -64,71 +77,89 @@ def main():
     
     timer = pb.ProgressBar(widgets=widget, maxval=number_of_episodes).start()
 
+
     # use keep_awake to keep workspace from disconnecting
-    for episode in keep_awake(range(0, number_of_episodes, parallel_envs)):
+    for episode in range(0, number_of_episodes):
 
         timer.update(episode)
 
-
-        reward_this_episode = np.zeros((parallel_envs, 3))
-        all_obs = env.reset() #
-        obs, obs_full = transpose_list(all_obs)
+        
+        env_info = env.reset(train_mode=True)[brain_name]
+        states = env_info.vector_observations        
+        reward_this_episode = np.zeros((num_agents, ))
+        
+        #obs, obs_full = transpose_list(all_obs)
 
         #for calculating rewards for this particular episode - addition of all time steps
 
         # save info or not
-        save_info = ((episode) % save_interval < parallel_envs or episode==number_of_episodes-parallel_envs)
-        frames = []
-        tmax = 0
+        #save_info = ((episode) % save_interval < parallel_envs or episode==number_of_episodes-parallel_envs)
+        #frames = []
+        #tmax = 0
         
-        if save_info:
-            frames.append(env.render('rgb_array'))
+        #if save_info:
+        #    frames.append(env.render('rgb_array'))
 
 
+        #print('type(states): ', type(states))
         
-        for episode_t in range(episode_length):
-
-            t += parallel_envs
-            
+        
+        #print('states', states)
+        
+        for episode_t in range(episode_length):          
 
             # explore = only explore for a certain number of episodes
             # action input needs to be transposed
-            actions = maddpg.act(transpose_to_tensor(obs), noise=noise)
+            actions = maddpg.act(states, noise=noise)
             noise *= noise_reduction
             
-            actions_array = torch.stack(actions).detach().numpy()
+
+            
+            
+            
+            #actions_array = torch.stack(actions).detach().numpy()
 
             # transpose the list of list
             # flip the first two indices
             # input to step requires the first index to correspond to number of parallel agents
-            actions_for_env = np.rollaxis(actions_array,1)
+            #actions_for_env = np.rollaxis(actions_array,1)
             
             # step forward one frame
-            next_obs, next_obs_full, rewards, dones, info = env.step(actions_for_env)
+            #next_obs, next_obs_full, rewards, dones, info = env.step(actions_for_env)
+            next_states = env_info.vector_observations
+            rewards = env_info.rewards
+            dones = env_info.local_done
             
+            #print('main-transition-next_states: ', next_states)
             # add data to buffer
-            transition = (obs, obs_full, actions_for_env, rewards, next_obs, next_obs_full, dones)
-            
+            transition = (states, actions, rewards, next_states, dones)
             buffer.push(transition)
             
+            stats = next_states
             reward_this_episode += rewards
+            
+            if np.any(dones):
+                break
 
-            obs, obs_full = next_obs, next_obs_full
+            #obs, obs_full = next_obs, next_obs_full
             
             # save gif frame
-            if save_info:
-                frames.append(env.render('rgb_array'))
-                tmax+=1
+            #if save_info:
+            #    frames.append(env.render('rgb_array'))
+            #    tmax+=1
         
         # update once after every episode_per_update
-        if len(buffer) > batchsize and episode % episode_per_update < parallel_envs:
-            for a_i in range(3):
+        print('len(buffer): ', len(buffer), ', batchsize: ', batchsize)
+        if len(buffer) > batchsize:
+            for a_i in range(1): #num_agents):
+                print('main-inside a_i')
                 samples = buffer.sample(batchsize)
+                
                 maddpg.update(samples, a_i, logger)
-            maddpg.update_targets() #soft update the target network towards the actual networks
+                #maddpg.update_targets() #soft update the target network towards the actual networks
 
         
-        
+        """
         for i in range(parallel_envs):
             agent0_reward.append(reward_this_episode[i,0])
             agent1_reward.append(reward_this_episode[i,1])
@@ -159,10 +190,11 @@ def main():
             # save gif files
             imageio.mimsave(os.path.join(model_dir, 'episode-{}.gif'.format(episode)), 
                             frames, duration=.04)
-
+    """
+        
     env.close()
     logger.close()
     timer.finish()
-    """
+        
 if __name__=='__main__':
     main()
