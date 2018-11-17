@@ -42,7 +42,7 @@ def main():
     noise_reduction = 0.9999
     #BUFFER_SIZE = int(1e5) # replay buffer size
     BUFFER_SIZE = int(10)
-    print_every = 1
+    print_every = 100
     # how many episodes before update
     #episode_per_update = 2 * parallel_envs
 
@@ -134,9 +134,10 @@ def main():
         
         #saving model
         save_dict_list =[]
-        if episode_t % print_every == 0 or average_score > -1:
+        print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode_t, average_score), end="")
+        if episode_t % print_every == 0 or average_score > 1:
+            """
             for i in range(num_agents):
-
                 save_dict = {'actor_params' : maddpg.maddpg_agent[i].actor.state_dict(),
                              'actor_optim_params': maddpg.maddpg_agent[i].actor_optimizer.state_dict(),
                              'critic_params' : maddpg.maddpg_agent[i].critic.state_dict(),
@@ -145,7 +146,7 @@ def main():
 
                 torch.save(save_dict_list, 
                            os.path.join(model_dir, 'episode-{}.pt'.format(episode)))
-                
+            """
             if average_score > 2.5:
                 break
      
