@@ -15,13 +15,11 @@ class MADDPG:
         super(MADDPG, self).__init__()
         self.num_agents = num_agents
         self.num_spaces = num_spaces
-        # critic input = obs_full + actions = 24+2+2+2=20
-        #self.in_actor = 24
-        #self.out_actor = 2
-        #self.in_critic = self.in_actor * self.out_actor
-        #self.out_critic = self.out_actor * 2
         
-        
+        """
+        self.maddpg_agent = [DDPGAgent(self.num_spaces, 24, 128, 2, 52, 256, 128),  
+                             DDPGAgent(self.num_spaces, 24, 128, 2, 52, 256, 128)]
+        """
         self.maddpg_agent = [DDPGAgent(self.num_spaces, 24, 128, 2, 52, 256, 128),  
                              DDPGAgent(self.num_spaces, 24, 128, 2, 52, 256, 128)]
         
@@ -83,20 +81,12 @@ class MADDPG:
         
         states = transpose_to_tensor(states)
         actions = transpose_to_tensor(actions)
-        rewards = transpose_to_tensor(rewards)
-        #rewards = torch.tensor(rewards, device=device).float()
+        #rewards = transpose_to_tensor(rewards)
         next_states = transpose_to_tensor(next_states)
-        dones = transpose_to_tensor(dones)
-        #dones = torch.tensor(dones, device=device).float()
+        #dones = transpose_to_tensor(dones)
 
-        #print('maddpg-states: ', len(states), len(states[0]), len(states[0][0]))
-        #print('maddpg-actions: ', len(actions), len(actions[0]), len(actions[0][0]))
-        #print('maddpg-rewards: ', len(rewards), len(rewards[0]))
-        #print('maddpg-next_states: ', len(next_states), len(next_states[0]), len(next_states[0][0]))
-        #print('maddpg-dones: ', len(dones), len(dones[0]))
-        
-        #print('maddpg-sample: ', )
-        #states, actions, rewards, next_states, dones = map(transpose_to_tensor, samples)
+        dones = transpose_to_tensor(transpose_list(zip(*dones)))
+        rewards = transpose_to_tensor(transpose_list(zip(*rewards)))
         
         #obs_full = torch.stack(obs_full)
         #next_obs_full = torch.stack(next_obs_full)
@@ -113,8 +103,6 @@ class MADDPG:
         #critic loss = batch mean of (y- Q(s,a) from target network)^2
         #y = reward of this timestep + discount * Q(st+1,at+1) from target network
         target_actions = self.target_act(next_states)
-        #print('maddpg-target_actions: ', len(target_actions), len(target_actions[0]))
-        #print('maddpg-actions: ', len(actions), len(actions[0]))
         
         target_actions = torch.cat(target_actions, dim=1)
         actions = torch.cat(actions, dim=1)
@@ -135,7 +123,6 @@ class MADDPG:
         y = rewards[agent_number].view(-1, 1) + self.discount_factor * q_next * (1 - dones[agent_number].view(-1, 1))
         
         #action = torch.cat(actions, dim=1)
-        #critic_input = torch.cat((states_full, target_actions), dim=1).to(device)
         critic_input = torch.cat((states_full, actions), dim=1).to(device)
         
         
