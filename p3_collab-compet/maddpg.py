@@ -42,33 +42,24 @@ class MADDPG:
     def act(self, obs_all_agents, noise=0.0):
         """get actions from all agents in the MADDPG object"""
         actions = []
-        #print('maddpg-act-obs_all_agents: ', obs_all_agents)
         
         for agent, state in zip(self.maddpg_agent, obs_all_agents):
-            #print('maddpg-agents: ', agents)
-            #print('maddpg-act-state: ', state.shape)
             state = torch.tensor(state).float().to(device)
             action = agent.act(state, noise)
-            #print('maddpg-act-action: ', action)
             actions.append(action)
         
         actions = np.vstack(actions[i].detach().numpy() for i in range(self.num_agents))
-        #print('maddpg-act-actions: ', actions)
         return actions
 
     def target_act(self, obs_all_agents, noise=0.0):
         """get target network actions from all the agents in the MADDPG object """
         target_actions = []
         
-        #print('maddpg-target-act-obs_all_agents: ', obs_all_agents)
         #target_actions = [ddpg_agent.target_act(obs, noise) for ddpg_agent, obs in zip(self.maddpg_agent, obs_all_agents)]
         for agent, state in zip(self.maddpg_agent, obs_all_agents):
-            #print('maddpg-agent: ', agent.shape)
-            #print('maddpg-target-act-state: ', state.shape)
             state = torch.tensor(state).float().to(device)
             target_action = agent.act(state, noise)
             target_actions.append(target_action)
-        #print("maddpg-target_actions: ", len(target_actions))
         return target_actions
 
     def update(self, samples, agent_number, logger):
@@ -123,17 +114,17 @@ class MADDPG:
         #y = reward of this timestep + discount * Q(st+1,at+1) from target network
         target_actions = self.target_act(next_states)
         #print('maddpg-target_actions: ', len(target_actions), len(target_actions[0]))
-        #print('maddpg-target_actions: ', target_actions)
+        #print('maddpg-actions: ', len(actions), len(actions[0]))
         
         target_actions = torch.cat(target_actions, dim=1)
-        print('maddpg-target_actions: ', len(target_actions), len(target_actions[0]))
-        
+        actions = torch.cat(actions, dim=1)
         """
         spapes
         n - batch size
         states_full - n 48
         next_states_full:  n 48
         target_actions:  n 4
+        actions:  n 4
         """
             
         target_critic_input = torch.cat((next_states_full,target_actions), dim=1).to(device)
@@ -144,7 +135,10 @@ class MADDPG:
         y = rewards[agent_number].view(-1, 1) + self.discount_factor * q_next * (1 - dones[agent_number].view(-1, 1))
         
         #action = torch.cat(actions, dim=1)
-        critic_input = torch.cat((states_full, target_actions), dim=1).to(device)
+        #critic_input = torch.cat((states_full, target_actions), dim=1).to(device)
+        critic_input = torch.cat((states_full, actions), dim=1).to(device)
+        
+        
         q = agent.critic(critic_input)
         
         huber_loss = torch.nn.SmoothL1Loss()

@@ -17,8 +17,6 @@ def seeding(seed=1):
 
 def main():
     seeding()
-    # number of parallel agents
-    # parallel_envs = 4
     # number of training episodes.
     # change this to higher number to experiment. say 30000.
     
@@ -28,9 +26,9 @@ def main():
     brain = env.brains[brain_name]
 
 
-    number_of_episodes = 1
-    episode_length = 10
-    batchsize = 8 #1000
+    number_of_episodes = 2000
+    episode_length = 1000
+    batchsize = 256
     # how many episodes to save policy and gif
     save_interval = 1000
     rewards_deque = deque(maxlen=100)
@@ -38,10 +36,10 @@ def main():
     
     # amplitude of OU noise
     # this slowly decreases to 0
-    noise = 2
+    noise = 1.0
     noise_reduction = 0.9999
-    #BUFFER_SIZE = int(1e5) # replay buffer size
-    BUFFER_SIZE = int(10)
+    BUFFER_SIZE = int(1e5) # replay buffer size
+    
     print_every = 100
     # how many episodes before update
     #episode_per_update = 2 * parallel_envs
@@ -64,16 +62,17 @@ def main():
     
     # initialize policy and critic
     maddpg = MADDPG(num_agents, num_spaces)
+    
     logger = SummaryWriter(log_dir=log_path)
 
     # training loop
     # show progressbar
+
     import progressbar as pb
     widget = ['episode: ', pb.Counter(),'/',str(number_of_episodes),' ', 
               pb.Percentage(), ' ', pb.ETA(), ' ', pb.Bar(marker=pb.RotatingMarker()), ' ' ]
     
     timer = pb.ProgressBar(widgets=widget, maxval=number_of_episodes).start()
-
 
     # use keep_awake to keep workspace from disconnecting
     for episode in range(0, number_of_episodes):
@@ -134,9 +133,10 @@ def main():
         
         #saving model
         save_dict_list =[]
-        print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode_t, average_score), end="")
-        if episode_t % print_every == 0 or average_score > 1:
-            """
+        
+        if episode_t % print_every == 0 or average_score > 0.5:
+            print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode_t, average_score), end="")
+
             for i in range(num_agents):
                 save_dict = {'actor_params' : maddpg.maddpg_agent[i].actor.state_dict(),
                              'actor_optim_params': maddpg.maddpg_agent[i].actor_optimizer.state_dict(),
@@ -145,14 +145,13 @@ def main():
                 save_dict_list.append(save_dict)
 
                 torch.save(save_dict_list, 
-                           os.path.join(model_dir, 'episode-{}.pt'.format(episode)))
-            """
-            if average_score > 2.5:
+
+            if average_score > 0.5:
                 break
-     
+    
     env.close()
-    logger.close()
-    timer.finish()
+    #logger.close()
+    #timer.finish()
         
 if __name__=='__main__':
     main()

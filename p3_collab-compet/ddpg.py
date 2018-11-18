@@ -16,7 +16,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DDPGAgent:
     def __init__(self, in_actor, hidden_in_actor, hidden_out_actor, out_actor, in_critic, 
-                 hidden_in_critic, hidden_out_critic, lr_actor=1.0e-2, lr_critic=1.0e-2):
+                 hidden_in_critic, hidden_out_critic, lr_actor=1.0e-3, lr_critic=1.0e-3):
         super(DDPGAgent, self).__init__()
 
         self.actor = Network(in_actor, hidden_in_actor, hidden_out_actor, out_actor, actor=True).to(device)
@@ -38,9 +38,11 @@ class DDPGAgent:
     def act(self, obs, noise=0.0):
         obs = obs.to(device)
         action = self.actor(obs) + noise*self.noise.noise()
+        action = torch.clamp(action, -1.0, 1.0)
         return action
 
     def target_act(self, obs, noise=0.0):
         obs = obs.to(device)
         action = self.target_actor(obs) + noise*self.noise.noise()
+        action = torch.clamp(action, -1.0, 1.0)
         return action
