@@ -11,17 +11,17 @@ import torch.nn.functional as F
 import numpy as np
 
 class MADDPG:
-    def __init__(self, num_agents, num_spaces, discount_factor=0.95, tau=0.02):
+    def __init__(self, num_agents, num_spaces, discount_factor=0.9, tau=1e-3):
         super(MADDPG, self).__init__()
         self.num_agents = num_agents
         self.num_spaces = num_spaces
         
-        """
+        
         self.maddpg_agent = [DDPGAgent(self.num_spaces, 24, 128, 2, 52, 256, 128),  
                              DDPGAgent(self.num_spaces, 24, 128, 2, 52, 256, 128)]
-        """
-        self.maddpg_agent = [DDPGAgent(self.num_spaces, 24, 128, 2, 52, 256, 128),  
-                             DDPGAgent(self.num_spaces, 24, 128, 2, 52, 256, 128)]
+        
+        #self.maddpg_agent = [DDPGAgent(self.num_spaces, 24, 256, 512, 128, 128, 64),  
+        #                     DDPGAgent(self.num_spaces, 24, 256, 512, 128, 128, 64)]
         
         self.discount_factor = discount_factor
         self.tau = tau
