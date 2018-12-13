@@ -26,8 +26,8 @@ def main():
     brain = env.brains[brain_name]
 
 
-    number_of_episodes = 2000
-    episode_length = 1000
+    number_of_episodes = 100
+    episode_length = 100
     batchsize = 256
     # how many episodes to save policy and gif
     save_interval = 1000
@@ -46,9 +46,9 @@ def main():
 
     env_info = env.reset(train_mode=True)[brain_name]
     states = env_info.vector_observations
-    print('states.shape', states.shape)
+    #print('states.shape', states.shape)
     num_agents, num_spaces = states.shape
-    print('num_agents: ', num_agents, ', num_spaces: ', num_spaces)
+    #print('num_agents: ', num_agents, ', num_spaces: ', num_spaces)
         
     log_path = os.getcwd()+"/log"
     model_dir= os.getcwd()+"/model_dir"
@@ -66,18 +66,19 @@ def main():
     logger = SummaryWriter(log_dir=log_path)
 
     # training loop
-    # show progressbar
-
-    import progressbar as pb
-    widget = ['episode: ', pb.Counter(),'/',str(number_of_episodes),' ', 
-              pb.Percentage(), ' ', pb.ETA(), ' ', pb.Bar(marker=pb.RotatingMarker()), ' ' ]
     
-    timer = pb.ProgressBar(widgets=widget, maxval=number_of_episodes).start()
+    # show progressbar
+    #import progressbar as pb
+    #widget = ['episode: ', pb.Counter(),'/',str(number_of_episodes),' ', 
+    #          pb.Percentage(), ' ', pb.ETA(), ' ', pb.Bar(marker=pb.RotatingMarker()), ' ' ]
+    
+    #timer = pb.ProgressBar(widgets=widget, maxval=number_of_episodes).start()
+    
 
     # use keep_awake to keep workspace from disconnecting
     for episode in range(0, number_of_episodes):
         rewards_this_episode = np.zeros((num_agents, ))
-        timer.update(episode)
+        #timer.update(episode)
 
         
         env_info = env.reset(train_mode=True)[brain_name]
@@ -118,10 +119,11 @@ def main():
 
         # update once after every episode_per_update
         if len(buffer) > batchsize:
-            for a_i in range(num_agents):
+            for a_i in range(1): #num_agents):
                 samples = buffer.sample(batchsize)
                 
                 maddpg.update(samples, a_i, logger)
+    
                 maddpg.update_targets() #soft update the target network towards the actual networks
 
         
@@ -135,7 +137,7 @@ def main():
         save_dict_list =[]
         
         if episode_t % print_every == 0 or average_score > 0.5:
-            print('\rEpisode {}\tAverage Score: {:.2f}'.format(episode_t, average_score), end="")
+            print('\nEpisode {}\tAverage Score: {:.2f}'.format(episode_t, average_score), end="")
 
             for i in range(num_agents):
                 save_dict = {'actor_params' : maddpg.maddpg_agent[i].actor.state_dict(),
@@ -144,13 +146,13 @@ def main():
                              'critic_optim_params' : maddpg.maddpg_agent[i].critic_optimizer.state_dict()}
                 save_dict_list.append(save_dict)
 
-                torch.save(save_dict_list, 
+                torch.save(save_dict_list, os.path.join(model_dir, 'episode-{}.pt'.format(episode)))
 
             if average_score > 0.5:
                 break
     
     env.close()
-    #logger.close()
+    logger.close()
     #timer.finish()
         
 if __name__=='__main__':
