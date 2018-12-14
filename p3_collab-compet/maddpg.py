@@ -48,6 +48,7 @@ class MADDPG:
             actions.append(action)
         
         actions = np.vstack(actions[i].detach().numpy() for i in range(self.num_agents))
+        actions = transpose_to_tensor(actions)
         return actions
 
 
@@ -130,7 +131,7 @@ class MADDPG:
         huber_loss = torch.nn.SmoothL1Loss()
         critic_loss = huber_loss(q, y.detach())
         critic_loss.backward()
-        #torch.nn.utils.clip_grad_norm_(agent.critic.parameters(), 0.5)
+        torch.nn.utils.clip_grad_norm_(agent.critic.parameters(), 0.5)
         agent.critic_optimizer.step()
 
 
@@ -150,7 +151,7 @@ class MADDPG:
         # get the policy gradient
         actor_loss = -agent.critic(q_input2, 1).mean()
         actor_loss.backward()
-        #torch.nn.utils.clip_grad_norm_(agent.actor.parameters(),0.5)
+        torch.nn.utils.clip_grad_norm_(agent.actor.parameters(),0.5)
         agent.actor_optimizer.step()
 
         # for TensorBoard

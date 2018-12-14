@@ -21,19 +21,6 @@ class DDPGAgent:
         self.target_actor = Actor(state_space, action_space).to(device)
         self.target_critic = Critic(state_space * 2, action_space).to(device)
 
-        """
-        self.actor = Network(in_actor, hidden_in_actor, hidden_out_actor,
-                             out_actor, actor=True).to(device)
-
-        self.critic = Network(in_critic, hidden_in_critic, hidden_out_critic,
-                              1).to(device)
-        self.target_actor = Network(in_actor, hidden_in_actor, hidden_out_actor,
-                                    out_actor, actor=True).to(device)
-        self.target_critic = Network(in_critic, hidden_in_critic,
-                                     hidden_out_critic, 1).to(device)
-        """
-
-        #self.noise = OUNoise(out_actor, scale=1.0)
         self.noise = OUNoise(action_space, scale=1.0)
 
         # initialize targets same as original networks

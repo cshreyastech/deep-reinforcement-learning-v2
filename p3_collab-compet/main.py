@@ -26,8 +26,8 @@ def main():
     brain = env.brains[brain_name]
 
 
-    number_of_episodes = 100
-    episode_length = 100
+    number_of_episodes = 2000
+    episode_length = 2000
     batchsize = 256
     # how many episodes to save policy and gif
     save_interval = 1000
@@ -62,7 +62,6 @@ def main():
     
     # initialize policy and critic
     maddpg = MADDPG(num_agents, num_spaces)
-    
     logger = SummaryWriter(log_dir=log_path)
 
     # training loop
@@ -87,43 +86,45 @@ def main():
     
         
         for episode_t in range(episode_length):          
-
             # explore = only explore for a certain number of episodes
             # action input needs to be transposed
             actions = maddpg.act(states, noise=noise)
             noise *= noise_reduction
             
-            #actions_array = torch.stack(actions).detach().numpy()
-
+            actions = torch.stack(actions).detach().numpy()
+            
             # transpose the list of list
             # flip the first two indices
             # input to step requires the first index to correspond to number of parallel agents
-            #actions_for_env = np.rollaxis(actions_array,1)
-            
+            #actions_for_env = np.rollaxis(actions_array, 1)
+            #print('main-actions_for_env: ', actions_for_env)
             # step forward one frame
-            #next_obs, next_obs_full, rewards, dones, info = env.step(actions_for_env)
-            next_states = env_info.vector_observations
+            #next_states, next_states_full, rewards, dones, info = env.step(actions_for_env)
+            #env_step = env.step(actions_for_env)
+            
+            
+            env_info = env.step(actions)[brain_name]
             rewards = env_info.rewards
+            next_states = env_info.vector_observations
             dones = env_info.local_done
             
-            #print('main-transition-next_states: ', next_states)
+
             # add data to buffer
             transition = (states, actions, rewards, next_states, dones)
             buffer.push(transition)
             
-            stats = next_states
+            states = next_states
             reward_this_episode += rewards
             
             if np.any(dones):
                 break
 
         # update once after every episode_per_update
+        #print('main-len(buffer), batchsize', len(buffer), batchsize)
         if len(buffer) > batchsize:
-            for a_i in range(1): #num_agents):
+            for a_i in range(num_agents):
                 samples = buffer.sample(batchsize)
-                
                 maddpg.update(samples, a_i, logger)
-    
                 maddpg.update_targets() #soft update the target network towards the actual networks
 
         
@@ -135,9 +136,9 @@ def main():
         
         #saving model
         save_dict_list =[]
-        
+        #print('\nEpisode {}\tAverage Score: {:.2f}'.format(episode_t, average_score), end="")
         if episode_t % print_every == 0 or average_score > 0.5:
-            print('\nEpisode {}\tAverage Score: {:.2f}'.format(episode_t, average_score), end="")
+            print('\nEpisode {}\tAverage Score: {:.2f}'.format(episode, average_score), end="")
 
             for i in range(num_agents):
                 save_dict = {'actor_params' : maddpg.maddpg_agent[i].actor.state_dict(),
@@ -150,10 +151,11 @@ def main():
 
             if average_score > 0.5:
                 break
-    
+
     env.close()
     logger.close()
     #timer.finish()
         
 if __name__=='__main__':
     main()
+    #https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Python-API.md
