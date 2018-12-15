@@ -11,7 +11,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class MADDPG:
     """policy + critic updates"""
 
-    def __init__(self, discount_factor=0.95, tau=0.02, state_space=24, action_space=2, num_agents=2):
+    def __init__(self, discount_factor=0.999, tau=1e-5, state_space=24, action_space=2, num_agents=2):
         super(MADDPG, self).__init__()
 
         # critic input = obs_full + actions = 24 + 24 + 2 + 2
@@ -38,7 +38,7 @@ class MADDPG:
         return target_actors
 
 
-    def act(self, obs_all_agents, noise=0.0):
+    def act(self, obs_all_agents, noise=0.0001):
         """get actions from all agents in the MADDPG object"""
         actions = []
         
@@ -47,12 +47,17 @@ class MADDPG:
             action = agent.act(state, noise)
             actions.append(action)
         
-        actions = np.vstack(actions[i].detach().numpy() for i in range(self.num_agents))
+        
+
+        #actions = np.vstack(actions[i].detach().numpy() for i in range(self.num_agents))
+        actions = [a.detach().numpy() for a in actions]
+        actions = np.clip(actions, -1, 1)
+        np.vstack(actions)
         actions = transpose_to_tensor(actions)
         return actions
 
 
-    def target_act(self, obs_all_agents, noise=0.0):
+    def target_act(self, obs_all_agents, noise=0.0001):
         """get target network actions from all the agents in the MADDPG object """
         target_actions = []
         
@@ -79,13 +84,7 @@ class MADDPG:
         states = transpose_to_tensor(states)
         next_states = transpose_to_tensor(next_states)
         # print('states: ', len(states), len(states[0]), len(states[0][0]))
-        
-        # restructure states_full and next_states_full
-        # (batchsize, number of states * number of agents)
-        # (batchsize, 48)
-        states_full = torch.cat(states, dim=1)
-        next_states_full = torch.cat(next_states, dim=1)
-        # print('states_full: ', states_full.shape)
+
 
         # restructure actions
         # (batchsize, number of states * number of agents)
@@ -100,9 +99,19 @@ class MADDPG:
         dones = transpose_to_tensor(transpose_list(zip(*dones)))
         rewards = transpose_to_tensor(transpose_list(zip(*rewards)))
 
-        ################################# update critic #################################
+        # restructure states_full and next_states_full
+        # (batchsize, number of states * number of agents)
+        # (batchsize, 48)
+        states_full = torch.cat(states, dim=1)
+        #states_full = torch.cat((states[0],states[1]), dim=1)
+        next_states_full = torch.cat(next_states, dim=1)
+        #print('maddpg-states_full: ', states_full)
+
         agent = self.maddpg_agent[agent_number]
-        agent.critic_optimizer.zero_grad()
+        critic = self.maddpg_agent[agent_number]
+        
+        ################################# update critic #################################
+        critic.critic_optimizer.zero_grad()
 
         #critic loss = batch mean of (y- Q(s,a) from target network)^2
         #y = reward of this timestep + discount * Q(st+1,at+1) from target network
@@ -119,21 +128,20 @@ class MADDPG:
 
 
         with torch.no_grad():
-            q_next = agent.target_critic(target_critic_input, 1)
+            q_next = agent.target_critic(target_critic_input)
         
         y = rewards[agent_number].view(-1, 1) + \
             self.discount_factor * q_next * \
             (1 - dones[agent_number].view(-1, 1))
         critic_input = torch.cat((states_full, actions), dim=1).to(device)
 
-        q = agent.critic(critic_input, 1)
+        q = critic.critic(critic_input)
         
         huber_loss = torch.nn.SmoothL1Loss()
         critic_loss = huber_loss(q, y.detach())
         critic_loss.backward()
-        torch.nn.utils.clip_grad_norm_(agent.critic.parameters(), 0.5)
+        torch.nn.utils.clip_grad_norm_(agent.critic.parameters(), 1.0)
         agent.critic_optimizer.step()
-
 
         # ################################# update actor #################################
         agent.actor_optimizer.zero_grad()
@@ -149,20 +157,19 @@ class MADDPG:
         q_input2 = torch.cat((states_full, q_input), dim=1)
 
         # get the policy gradient
-        actor_loss = -agent.critic(q_input2, 1).mean()
+        actor_loss = -agent.critic(q_input2).mean()
         actor_loss.backward()
-        torch.nn.utils.clip_grad_norm_(agent.actor.parameters(),0.5)
+        torch.nn.utils.clip_grad_norm_(agent.actor.parameters(),1.0)
         agent.actor_optimizer.step()
 
         # for TensorBoard
-        al = actor_loss.cpu().detach().item()
-        cl = critic_loss.cpu().detach().item()
+        #al = actor_loss.cpu().detach().item()
+        #cl = critic_loss.cpu().detach().item()
         #logger.add_scalars('agent%i/losses' % agent_number,
         #                   {'critic loss': cl,
         #                    'actor_loss': al},
         #                   self.iter)
         
-
     def update_targets(self):
         """soft update targets"""
         self.iter += 1

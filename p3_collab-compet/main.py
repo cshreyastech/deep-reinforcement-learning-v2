@@ -26,9 +26,9 @@ def main():
     brain = env.brains[brain_name]
 
 
-    number_of_episodes = 2000
-    episode_length = 2000
-    batchsize = 256
+    number_of_episodes = 3000
+    episode_length = 100000
+    batchsize = 128
     # how many episodes to save policy and gif
     save_interval = 1000
     rewards_deque = deque(maxlen=100)
@@ -38,7 +38,7 @@ def main():
     # this slowly decreases to 0
     noise = 1.0
     noise_reduction = 0.9999
-    BUFFER_SIZE = int(1e5) # replay buffer size
+    BUFFER_SIZE = int(5e5) # replay buffer size
     
     print_every = 100
     # how many episodes before update
@@ -73,7 +73,6 @@ def main():
     
     #timer = pb.ProgressBar(widgets=widget, maxval=number_of_episodes).start()
     
-
     # use keep_awake to keep workspace from disconnecting
     for episode in range(0, number_of_episodes):
         rewards_this_episode = np.zeros((num_agents, ))
@@ -90,6 +89,14 @@ def main():
             # action input needs to be transposed
             actions = maddpg.act(states, noise=noise)
             noise *= noise_reduction
+
+
+            #print('main-actions', actions)
+            #actions = [a.detach().numpy() for a in actions]
+            #print('main-actions', actions)
+            #actions = np.array(actions).reshape(2, 2)
+            #actions = np.clip(actions, -1, 1)
+            #print('main-actions', actions)
             
             actions = torch.stack(actions).detach().numpy()
             
@@ -107,7 +114,7 @@ def main():
             rewards = env_info.rewards
             next_states = env_info.vector_observations
             dones = env_info.local_done
-            
+
 
             # add data to buffer
             transition = (states, actions, rewards, next_states, dones)
@@ -119,8 +126,8 @@ def main():
             if np.any(dones):
                 break
 
-        # update once after every episode_per_update
         #print('main-len(buffer), batchsize', len(buffer), batchsize)
+        # update once after every episode_per_update
         if len(buffer) > batchsize:
             for a_i in range(num_agents):
                 samples = buffer.sample(batchsize)
@@ -136,7 +143,7 @@ def main():
         
         #saving model
         save_dict_list =[]
-        #print('\nEpisode {}\tAverage Score: {:.2f}'.format(episode_t, average_score), end="")
+        print('\nEpisode {}\tAverage Score: {:.2f}'.format(episode, average_score), end="")
         if episode_t % print_every == 0 or average_score > 0.5:
             print('\nEpisode {}\tAverage Score: {:.2f}'.format(episode, average_score), end="")
 
