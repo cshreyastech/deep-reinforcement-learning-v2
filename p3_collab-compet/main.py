@@ -26,8 +26,7 @@ def main():
     brain = env.brains[brain_name]
 
 
-    number_of_episodes = 3000
-    episode_length = 100000
+    number_of_episodes = 5000
     batchsize = 128
     # how many episodes to save policy and gif
     save_interval = 1000
@@ -53,7 +52,7 @@ def main():
     log_path = os.getcwd()+"/log"
     model_dir= os.getcwd()+"/model_dir"
     
-    os.makedirs(model_dir, exist_ok=True)
+    #os.makedirs(model_dir, exist_ok=True)
 
     #torch.set_num_threads(parallel_envs)
     #env = envs.make_parallel_env(parallel_envs)
@@ -83,8 +82,8 @@ def main():
         states = env_info.vector_observations        
         reward_this_episode = np.zeros((num_agents, ))
     
-        
-        for episode_t in range(episode_length):          
+        episode_t = 0
+        while True:          
             # explore = only explore for a certain number of episodes
             # action input needs to be transposed
             actions = maddpg.act(states, noise=noise)
@@ -123,19 +122,20 @@ def main():
             states = next_states
             reward_this_episode += rewards
             
+
+            #print('main-len(buffer), batchsize', len(buffer), batchsize)
+            # update once after every episode_per_update
+            if len(buffer) > batchsize:
+                for a_i in range(num_agents):
+                    samples = buffer.sample(batchsize)
+                    maddpg.update(samples, a_i, logger)
+                    #maddpg.update_targets() #soft update the target network towards the actual networks
+
+            #print('main-rewards: ', rewards)
             if np.any(dones):
                 break
-
-        #print('main-len(buffer), batchsize', len(buffer), batchsize)
-        # update once after every episode_per_update
-        if len(buffer) > batchsize:
-            for a_i in range(num_agents):
-                samples = buffer.sample(batchsize)
-                maddpg.update(samples, a_i, logger)
-                maddpg.update_targets() #soft update the target network towards the actual networks
-
+            episode_t += 1
         
-        rewards.append(reward_this_episode)
         # just get maximum rewards
         rewards_deque.append(np.max(rewards_this_episode))
         average_score = np.mean(rewards_deque)
@@ -143,7 +143,7 @@ def main():
         
         #saving model
         save_dict_list =[]
-        print('\nEpisode {}\tAverage Score: {:.2f}'.format(episode, average_score), end="")
+        print('\nEpisode {}\tEpisode length: {:.2f}\tAverage Score: {:.2f}'.format(episode, episode_t, average_score), end="")
         if episode_t % print_every == 0 or average_score > 0.5:
             print('\nEpisode {}\tAverage Score: {:.2f}'.format(episode, average_score), end="")
 
@@ -158,6 +158,7 @@ def main():
 
             if average_score > 0.5:
                 break
+        
 
     env.close()
     logger.close()

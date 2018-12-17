@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 from ddpg import DDPGAgent
 from utilities import soft_update, transpose_to_tensor, transpose_list
@@ -11,7 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class MADDPG:
     """policy + critic updates"""
 
-    def __init__(self, discount_factor=0.999, tau=1e-5, state_space=24, action_space=2, num_agents=2):
+    def __init__(self, discount_factor=0.99, tau=1e-3, state_space=24, action_space=2, num_agents=2):
         super(MADDPG, self).__init__()
 
         # critic input = obs_full + actions = 24 + 24 + 2 + 2
@@ -46,7 +47,6 @@ class MADDPG:
             state = torch.tensor(state).float().to(device)
             action = agent.act(state, noise)
             actions.append(action)
-        
         
 
         #actions = np.vstack(actions[i].detach().numpy() for i in range(self.num_agents))
@@ -107,11 +107,11 @@ class MADDPG:
         next_states_full = torch.cat(next_states, dim=1)
         #print('maddpg-states_full: ', states_full)
 
+        critic = self.maddpg_agent[0]
         agent = self.maddpg_agent[agent_number]
-        critic = self.maddpg_agent[agent_number]
-        
+
         ################################# update critic #################################
-        critic.critic_optimizer.zero_grad()
+        #critic.critic_optimizer.zero_grad()
 
         #critic loss = batch mean of (y- Q(s,a) from target network)^2
         #y = reward of this timestep + discount * Q(st+1,at+1) from target network
@@ -128,7 +128,7 @@ class MADDPG:
 
 
         with torch.no_grad():
-            q_next = agent.target_critic(target_critic_input)
+            q_next = critic.target_critic(target_critic_input)
         
         y = rewards[agent_number].view(-1, 1) + \
             self.discount_factor * q_next * \
@@ -137,14 +137,16 @@ class MADDPG:
 
         q = critic.critic(critic_input)
         
-        huber_loss = torch.nn.SmoothL1Loss()
-        critic_loss = huber_loss(q, y.detach())
+        #huber_loss = torch.nn.SmoothL1Loss()
+        #critic_loss = huber_loss(q, y.detach())
+        critic_loss = F.mse_loss(q, y)
+        critic.critic_optimizer.zero_grad()
         critic_loss.backward()
-        torch.nn.utils.clip_grad_norm_(agent.critic.parameters(), 1.0)
-        agent.critic_optimizer.step()
+        torch.nn.utils.clip_grad_norm_(critic.critic.parameters(), 1.0)
+        critic.critic_optimizer.step()
 
         # ################################# update actor #################################
-        agent.actor_optimizer.zero_grad()
+        #agent.actor_optimizer.zero_grad()
         # make input to agent
         # detach the other agents to save computation
         # saves some time for computing derivative
@@ -158,9 +160,14 @@ class MADDPG:
 
         # get the policy gradient
         actor_loss = -agent.critic(q_input2).mean()
+        agent.actor_optimizer.zero_grad()
         actor_loss.backward()
         torch.nn.utils.clip_grad_norm_(agent.actor.parameters(),1.0)
         agent.actor_optimizer.step()
+
+        # ###############################################################################
+        # soft update the target network towards the actual networks
+        self.update_targets(agent, critic)
 
         # for TensorBoard
         #al = actor_loss.cpu().detach().item()
@@ -170,9 +177,12 @@ class MADDPG:
         #                    'actor_loss': al},
         #                   self.iter)
         
-    def update_targets(self):
+    def update_targets(self, agent, critic):
         """soft update targets"""
         self.iter += 1
-        for ddpg_agent in self.maddpg_agent:
-            soft_update(ddpg_agent.target_actor, ddpg_agent.actor, self.tau)
-            soft_update(ddpg_agent.target_critic, ddpg_agent.critic, self.tau)
+        #for ddpg_agent in self.maddpg_agent:
+        #    soft_update(ddpg_agent.target_actor, ddpg_agent.actor, self.tau)
+        #    soft_update(ddpg_agent.target_critic, ddpg_agent.critic, self.tau)
+        soft_update(agent.target_actor, agent.actor, self.tau)
+        soft_update(critic.target_critic, critic.critic, self.tau)
+        agent.noise.reset()
