@@ -35,9 +35,9 @@ def main():
     
     # amplitude of OU noise
     # this slowly decreases to 0
-    noise = 1.0
+    noise = 2.0
     noise_reduction = 0.9999
-    BUFFER_SIZE = int(5e5) # replay buffer size
+    BUFFER_SIZE = int(1e5) # replay buffer size
     
     print_every = 100
     # how many episodes before update
@@ -113,7 +113,7 @@ def main():
             rewards = env_info.rewards
             next_states = env_info.vector_observations
             dones = env_info.local_done
-
+            #print('main-rewards', rewards)
 
             # add data to buffer
             transition = (states, actions, rewards, next_states, dones)

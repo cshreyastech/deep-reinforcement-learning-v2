@@ -12,7 +12,8 @@ def hidden_init(layer):
 class Actor(nn.Module):
     """Actor (Policy) Model."""
 
-    def __init__(self, state_size, action_size, seed, hidden_1=512, hidden_2=256, hidden_3=128, hidden_4=64):
+    def __init__(self, state_size, action_size, seed, hidden_1=512, 
+        hidden_2=256, hidden_3=128, hidden_4=64, drop_p=0.2):
         """Initialize parameters and build model.
         Params
         ======
@@ -34,6 +35,7 @@ class Actor(nn.Module):
         self.fa4 = nn.Linear(hidden_3, hidden_4)
         self.bn4 = nn.BatchNorm1d(hidden_4)
         self.fa5 = nn.Linear(hidden_4, action_size)
+        self.dropout = nn.Dropout(p=drop_p)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -45,18 +47,24 @@ class Actor(nn.Module):
 
     def forward(self, state):
         """Build an actor (policy) network that maps states -> actions."""
-        x = F.leaky_relu(self.fa1(state))
-        x = F.leaky_relu(self.fa2(x))
-        x = F.leaky_relu(self.fa3(x))
-        x = F.leaky_relu(self.fa4(x))
-        x = F.leaky_relu(self.fa5(x))
+        x = F.relu(self.fa1(state))
+        x = self.dropout(x)
+        x = F.relu(self.fa2(x))
+        x = self.dropout(x)
+        x = F.relu(self.fa3(x))
+        x = self.dropout(x)
+        x = F.relu(self.fa4(x))
+        x = self.dropout(x)
+        x = F.relu(self.fa5(x))
+        x = self.dropout(x)
         return torch.tanh(x)
 
 
 class Critic(nn.Module):
     """Critic (Value) Model."""
 
-    def __init__(self, state_size, action_size, seed, hidden_1=512, hidden_2=256, hidden_3=128, hidden_4=64):
+    def __init__(self, state_size, action_size, seed, hidden_1=512, 
+        hidden_2=256, hidden_3=128, hidden_4=64, drop_p=0.2):
         """Initialize parameters and build model.
         Params
         ======
@@ -79,6 +87,7 @@ class Critic(nn.Module):
         self.fc4 = nn.Linear(hidden_3, hidden_4)
         self.bn4 = nn.BatchNorm1d(hidden_4)
         self.fc5 = nn.Linear(hidden_4, 1)
+        self.dropout = nn.Dropout(p=drop_p)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -91,9 +100,14 @@ class Critic(nn.Module):
     def forward(self, state_action):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
         #print('Critic-forward', len(state), len(state[0]))
-        x = F.leaky_relu(self.fc1(state_action))
-        x = F.leaky_relu(self.fc2(x))
-        x = F.leaky_relu(self.fc3(x))
-        x = F.leaky_relu(self.fc4(x))
-        x = F.leaky_relu(self.fc5(x))
+        x = F.relu(self.fc1(state_action))
+        x = self.dropout(x)
+        x = F.relu(self.fc2(x))
+        x = self.dropout(x)
+        x = F.relu(self.fc3(x))
+        x = self.dropout(x)
+        x = F.relu(self.fc4(x))
+        x = self.dropout(x)
+        x = F.relu(self.fc5(x))
+        x = self.dropout(x)
         return x
