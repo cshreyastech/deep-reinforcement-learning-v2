@@ -13,7 +13,7 @@ class Actor(nn.Module):
     """Actor (Policy) Model."""
 
     def __init__(self, state_size, action_size, seed, hidden_1=512, 
-        hidden_2=256, hidden_3=128, hidden_4=64, drop_p=0.2):
+        hidden_2=256, hidden_3=128, hidden_4=64, drop_p=0.1):
         """Initialize parameters and build model.
         Params
         ======
@@ -64,7 +64,7 @@ class Critic(nn.Module):
     """Critic (Value) Model."""
 
     def __init__(self, state_size, action_size, seed, hidden_1=512, 
-        hidden_2=256, hidden_3=128, hidden_4=64, drop_p=0.2):
+        hidden_2=256, hidden_3=128, hidden_4=64, drop_p=0.1):
         """Initialize parameters and build model.
         Params
         ======

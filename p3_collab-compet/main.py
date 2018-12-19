@@ -35,8 +35,8 @@ def main():
     
     # amplitude of OU noise
     # this slowly decreases to 0
-    noise = 2.0
-    noise_reduction = 0.9999
+    noise = 1.0
+    noise_reduction = 0.999
     BUFFER_SIZE = int(1e5) # replay buffer size
     
     print_every = 100
@@ -77,10 +77,8 @@ def main():
         rewards_this_episode = np.zeros((num_agents, ))
         #timer.update(episode)
 
-        
         env_info = env.reset(train_mode=True)[brain_name]
-        states = env_info.vector_observations        
-        reward_this_episode = np.zeros((num_agents, ))
+        states = env_info.vector_observations
     
         episode_t = 0
         while True:          
@@ -120,7 +118,7 @@ def main():
             buffer.push(transition)
             
             states = next_states
-            reward_this_episode += rewards
+            rewards_this_episode += rewards
             
 
             #print('main-len(buffer), batchsize', len(buffer), batchsize)
