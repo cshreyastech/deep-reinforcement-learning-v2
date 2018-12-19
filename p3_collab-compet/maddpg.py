@@ -12,7 +12,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class MADDPG:
     """policy + critic updates"""
 
-    def __init__(self, discount_factor=0.99, tau=1e-3, state_space=24, action_space=2, num_agents=2):
+    def __init__(self, discount_factor=0.99, tau=1e-3, state_space=24, 
+        action_space=2, num_agents=2):
         super(MADDPG, self).__init__()
 
         # critic input = obs_full + actions = 24 + 24 + 2 + 2
@@ -111,7 +112,7 @@ class MADDPG:
         agent = self.maddpg_agent[agent_number]
 
         ################################# update critic #################################
-        #critic.critic_optimizer.zero_grad()
+        critic.critic_optimizer.zero_grad()
 
         #critic loss = batch mean of (y- Q(s,a) from target network)^2
         #y = reward of this timestep + discount * Q(st+1,at+1) from target network
@@ -140,13 +141,13 @@ class MADDPG:
         #huber_loss = torch.nn.SmoothL1Loss()
         #critic_loss = huber_loss(q, y.detach())
         critic_loss = F.mse_loss(q, y)
-        critic.critic_optimizer.zero_grad()
+
         critic_loss.backward()
         torch.nn.utils.clip_grad_norm_(critic.critic.parameters(), 1.0)
         critic.critic_optimizer.step()
 
         # ################################# update actor #################################
-        #agent.actor_optimizer.zero_grad()
+        agent.actor_optimizer.zero_grad()
         # make input to agent
         # detach the other agents to save computation
         # saves some time for computing derivative
@@ -160,7 +161,6 @@ class MADDPG:
 
         # get the policy gradient
         actor_loss = -agent.critic(q_input2).mean()
-        agent.actor_optimizer.zero_grad()
         actor_loss.backward()
         torch.nn.utils.clip_grad_norm_(agent.actor.parameters(),1.0)
         agent.actor_optimizer.step()
