@@ -27,7 +27,7 @@ def main():
 
 
     number_of_episodes = 5000
-    batchsize = 128
+    batchsize = 256
     # how many episodes to save policy and gif
     save_interval = 1000
     rewards_deque = deque(maxlen=100)
@@ -36,7 +36,7 @@ def main():
     # amplitude of OU noise
     # this slowly decreases to 0
     noise = 1.0
-    noise_reduction = 0.999
+    noise_reduction = 0.9999
     BUFFER_SIZE = int(1e5) # replay buffer size
     
     print_every = 100

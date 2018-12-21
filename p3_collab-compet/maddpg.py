@@ -125,18 +125,18 @@ class MADDPG:
         target_actions = torch.cat(target_actions, dim=1)
         #print('target_actions', len(target_actions), len(target_actions[0]))
 
-        target_critic_input = torch.cat((next_states_full,target_actions), dim=1).to(device)
+        #target_critic_input = torch.cat((next_states_full,target_actions), dim=1).to(device)
 
 
         with torch.no_grad():
-            q_next = critic.target_critic(target_critic_input)
+            q_next = critic.target_critic(next_states_full, target_actions)
         
         y = rewards[agent_number].view(-1, 1) + \
             self.discount_factor * q_next * \
             (1 - dones[agent_number].view(-1, 1))
-        critic_input = torch.cat((states_full, actions), dim=1).to(device)
+        #critic_input = torch.cat((states_full, actions), dim=1).to(device)
 
-        q = critic.critic(critic_input)
+        q = critic.critic(states_full, actions)
         
         #huber_loss = torch.nn.SmoothL1Loss()
         #critic_loss = huber_loss(q, y.detach())
@@ -157,10 +157,10 @@ class MADDPG:
 
         q_input = torch.cat(q_input, dim=1)
         # combine all the actions and observations for input to critic
-        q_input2 = torch.cat((states_full, q_input), dim=1)
+        #q_input2 = torch.cat((states_full, q_input), dim=1)
 
         # get the policy gradient
-        actor_loss = -agent.critic(q_input2).mean()
+        actor_loss = -agent.critic(states_full, q_input).mean()
         actor_loss.backward()
         torch.nn.utils.clip_grad_norm_(agent.actor.parameters(),1.0)
         agent.actor_optimizer.step()
