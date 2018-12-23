@@ -27,7 +27,7 @@ def main():
 
 
     number_of_episodes = 5000
-    batchsize = 256
+    batchsize = 64
     # how many episodes to save policy and gif
     save_interval = 1000
     rewards_deque = deque(maxlen=100)
@@ -35,13 +35,15 @@ def main():
     
     # amplitude of OU noise
     # this slowly decreases to 0
-    noise = 1.0
+    noise = 1
     noise_reduction = 0.9999
     BUFFER_SIZE = int(1e5) # replay buffer size
     
     print_every = 100
+
+    parallel_envs = 0.5
     # how many episodes before update
-    #episode_per_update = 2 * parallel_envs
+    episode_per_update = 2 * parallel_envs
 
     env_info = env.reset(train_mode=True)[brain_name]
     states = env_info.vector_observations
@@ -62,7 +64,6 @@ def main():
     # initialize policy and critic
     maddpg = MADDPG(num_agents, num_spaces)
     logger = SummaryWriter(log_dir=log_path)
-
     # training loop
     
     # show progressbar
@@ -85,6 +86,7 @@ def main():
             # explore = only explore for a certain number of episodes
             # action input needs to be transposed
             actions = maddpg.act(states, noise=noise)
+            #actions = maddpg.act(states, noise=0.00009)
             noise *= noise_reduction
 
 
@@ -123,11 +125,11 @@ def main():
 
             #print('main-len(buffer), batchsize', len(buffer), batchsize)
             # update once after every episode_per_update
-            if len(buffer) > batchsize:
+            if len(buffer) > batchsize and episode % episode_per_update == 0:
                 for a_i in range(num_agents):
                     samples = buffer.sample(batchsize)
-                    maddpg.update(samples, a_i, logger)
-                    #maddpg.update_targets() #soft update the target network towards the actual networks
+                    maddpg.update(samples, a_i, logger, noise)
+                    maddpg.update_targets() #soft update the target network towards the actual networks
 
             #print('main-rewards: ', rewards)
             if np.any(dones):
@@ -135,13 +137,16 @@ def main():
             episode_t += 1
         
         # just get maximum rewards
+        #print('main-np.max(rewards_this_episode): ', np.max(rewards_this_episode))
+
+        #print('main-rewards_this_episode: ', rewards_this_episode, np.max(rewards_this_episode))
         rewards_deque.append(np.max(rewards_this_episode))
         average_score = np.mean(rewards_deque)
-
+        #print('main-rewards_deque: ', rewards_deque)
         
         #saving model
         save_dict_list =[]
-        print('\nEpisode {}\tEpisode length: {:.2f}\tAverage Score: {:.2f}'.format(episode, episode_t, average_score), end="")
+        print('\nEpisode {}\tEpisode length: {:.2f}\tAverage Score: {:.2f}\tnoise: {:.2f}'.format(episode, episode_t, average_score, noise), end="")
         if episode_t % print_every == 0 or average_score > 0.5:
             print('\nEpisode {}\tAverage Score: {:.2f}'.format(episode, average_score), end="")
 

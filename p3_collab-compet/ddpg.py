@@ -12,7 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class DDPGAgent:
-    def __init__(self, state_space, action_space, lr_actor=1.0e-4, lr_critic=1.0e-3, random_seed=0):
+    def __init__(self, state_space, action_space, lr_actor=1.0e-4, lr_critic=1.0e-4, random_seed=41):
         super(DDPGAgent, self).__init__()
         
         self.actor = Actor(state_space, action_space, random_seed).to(device)
@@ -28,16 +28,17 @@ class DDPGAgent:
         hard_update(self.target_critic, self.critic)
 
         self.actor_optimizer = Adam(self.actor.parameters(), lr=lr_actor)
-        self.critic_optimizer = Adam(self.critic.parameters(), lr=lr_critic,
-                                     weight_decay=0.0)
+        self.critic_optimizer = Adam(self.critic.parameters(), lr=lr_critic)
 
-    def act(self, obs, noise=0.1):
+    def act(self, obs, noise=0.5):
+        #print('ddpg-act-noise', noise)
         obs = obs.to(device)
         action = self.actor(obs) + noise*self.noise.noise()
         action = torch.clamp(action, -1.0, 1.0)
         return action
 
-    def target_act(self, obs, noise=0.1):
+    def target_act(self, obs, noise=0.5):
+        #print('ddpg-target_act-noise', noise)
         obs = obs.to(device)
         action = self.target_actor(obs) + noise*self.noise.noise()
         action = torch.clamp(action, -1.0, 1.0)
