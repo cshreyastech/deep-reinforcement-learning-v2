@@ -27,7 +27,7 @@ def main():
 
 
     number_of_episodes = 5000
-    batchsize = 64
+    batchsize = 4
     # how many episodes to save policy and gif
     save_interval = 1000
     rewards_deque = deque(maxlen=100)
@@ -81,7 +81,12 @@ def main():
         env_info = env.reset(train_mode=True)[brain_name]
         states = env_info.vector_observations
     
+        for agent in maddpg.maddpg_agent:
+            #print('main- reset agent noise')
+            agent.noise.reset()
+
         episode_t = 0
+
         while True:          
             # explore = only explore for a certain number of episodes
             # action input needs to be transposed
@@ -129,16 +134,18 @@ def main():
                 for a_i in range(num_agents):
                     samples = buffer.sample(batchsize)
                     maddpg.update(samples, a_i, logger, noise)
-                    maddpg.update_targets() #soft update the target network towards the actual networks
+                    #maddpg.update_targets() #soft update the target network towards the actual networks
 
             #print('main-rewards: ', rewards)
+
+            #print('rewards_this_episode: ', rewards_this_episode)
+            #print('main-np.max(rewards_this_episode): ', np.max(rewards_this_episode))
+            #print('---------------------------')
             if np.any(dones):
                 break
             episode_t += 1
-        
-        # just get maximum rewards
-        #print('main-np.max(rewards_this_episode): ', np.max(rewards_this_episode))
 
+        # just get maximum rewards
         #print('main-rewards_this_episode: ', rewards_this_episode, np.max(rewards_this_episode))
         rewards_deque.append(np.max(rewards_this_episode))
         average_score = np.mean(rewards_deque)
