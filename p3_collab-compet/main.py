@@ -31,6 +31,7 @@ def main():
     tau = 1e-3   # soft update factor
     gamma = 0.99 # reward discount factor
 
+    print_every = 1
     # how many episodes before update
     episode_per_update = 2
 
@@ -46,7 +47,6 @@ def main():
     buffer = ReplayBuffer(int(1e5))
     
     num_agents, num_states, num_actions = env.get_shapes()
-    print('main-shapes:', num_agents, num_states, num_actions)
 
     # initialize policy and critic
     maddpg = MADDPG(num_agents, num_states, num_actions, discount_factor=gamma, tau=tau)
@@ -66,7 +66,7 @@ def main():
         for agent in maddpg.maddpg_agent:
             agent.noise.reset()
 
-        episode_t = 0
+        episode_n = 0
 
         while True:
             actions = maddpg.act(torch.tensor(states, dtype=torch.float), noise=noise)
@@ -94,32 +94,35 @@ def main():
             if np.any(dones):
                 break
 
-            episode_t += 1
+            episode_n += 1
 
         agent0_reward.append(reward_this_episode[0, 0])
         agent1_reward.append(reward_this_episode[0, 1])
         
         avg_rewards = max(reward_this_episode[0, 0], reward_this_episode[0, 1])
+
         scores_window.append(avg_rewards)
         cur_score = np.mean(scores_window)
         ep_scores.append(cur_score)
-        print('\rEpisode: {}, episode_t: {}, Average score: {:.5f}, noise: {:.5f}'.format(episode, episode_t, cur_score, noise))
+        
 
         save_dict_list =[]
 
-        score_code = int(cur_score * 10)
+        if episode % print_every == 0 or avg_rewards > -1.0:
+            print('\rEpisode: {}, Episode Length: {}, Average score: {:.5f}, noise: {:.5f}'.format(episode, episode_n, cur_score, noise))
+            
+            if avg_rewards > -1.0:
+                for i in range(number_of_agents):
+                    save_dict = {'actor_params' : maddpg.maddpg_agent[i].actor.state_dict(),
+                                 'actor_optim_params': maddpg.maddpg_agent[i].actor_optimizer.state_dict(),
+                                 'critic_params' : maddpg.maddpg_agent[i].critic.state_dict(),
+                                 'critic_optim_params' : maddpg.maddpg_agent[i].critic_optimizer.state_dict()}
+                    save_dict_list.append(save_dict)
 
-        if avg_rewards > 0.5:
-            for i in range(number_of_agents):
-                save_dict = {'actor_params' : maddpg.maddpg_agent[i].actor.state_dict(),
-                             'actor_optim_params': maddpg.maddpg_agent[i].actor_optimizer.state_dict(),
-                             'critic_params' : maddpg.maddpg_agent[i].critic.state_dict(),
-                             'critic_optim_params' : maddpg.maddpg_agent[i].critic_optimizer.state_dict()}
-                save_dict_list.append(save_dict)
-
-                torch.save(save_dict_list, 
-                           os.path.join(model_dir, 'episode-{}-{}.pt'.format(episode,score_code)))
-
+                    torch.save(save_dict_list, 
+                               os.path.join(model_dir, 'episode-{}.pt'.format(episode)))
+                print('model saved, exit training')
+                break
     env.close()
 
 if __name__=='__main__':
