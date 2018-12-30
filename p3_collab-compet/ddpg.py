@@ -1,27 +1,26 @@
+# individual network settings for each actor + critic pair
+# see networkforall for details
+
+from network_separate import Actor, Critic
+from utilities import hard_update
 from torch.optim import Adam
 import torch
 import numpy as np
 
-#from network import Network
-from network_separate import Actor, Critic
-from utilities import hard_update, gumbel_softmax, onehot_from_logits
-from OUNoise import OUNoise
 
+# add OU noise for exploration
+from OUNoise import OUNoise
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
 class DDPGAgent:
-    def __init__(self, state_space, action_space, lr_actor=1.0e-4, lr_critic=1.0e-3, random_seed=41):
+    def __init__(self, in_actor, out_actor, in_critic, lr_actor=1.0e-4, lr_critic=1.0e-3):
         super(DDPGAgent, self).__init__()
-        
-        self.actor = Actor(state_space, action_space, random_seed).to(device)
-        self.critic = Critic(state_space * 2, action_space, random_seed).to(device)
-
-        self.target_actor = Actor(state_space, action_space, random_seed).to(device)
-        self.target_critic = Critic(state_space * 2, action_space, random_seed).to(device)
-
-        self.noise = OUNoise(action_space, scale=0.5) #0.5 showed some learning
+        self.actor = Actor(in_actor, out_actor).to(device)
+        self.critic = Critic(in_critic, out_actor*2).to(device)
+        self.target_actor = Actor(in_actor, out_actor).to(device)
+        self.target_critic = Critic(in_critic, out_actor*2).to(device)
+        self.noise = OUNoise(out_actor, scale=1.0)
 
         # initialize targets same as original networks
         hard_update(self.target_actor, self.actor)
@@ -31,15 +30,14 @@ class DDPGAgent:
         self.critic_optimizer = Adam(self.critic.parameters(), lr=lr_critic)
 
     def act(self, obs, noise=0.0):
-        #print('ddpg-act-noise', noise)
         obs = obs.to(device)
-        action = self.actor(obs) + noise*self.noise.noise()
-        action = torch.clamp(action, -1.0, 1.0)
-        return action
+        self.actor.eval()
+        with torch.no_grad():
+            action = self.actor(obs).cpu().data.numpy() + noise*self.noise.noise()
+        self.actor.train()
+        return np.clip(action, -1, 1)
 
     def target_act(self, obs, noise=0.0):
-        #print('ddpg-target_act-noise', noise)
         obs = obs.to(device)
-        action = self.target_actor(obs) + noise*self.noise.noise()
-        action = torch.clamp(action, -1.0, 1.0)
-        return action
+        action = self.target_actor(obs).cpu().data.numpy() + noise*self.noise.noise()
+        return np.clip(action, -1, 1)
