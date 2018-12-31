@@ -6,7 +6,7 @@ from ddpg import DDPGAgent
 import torch
 import torch.nn.functional as F
 
-from utilities import soft_update
+from utilities import soft_update, transpose_to_tensor
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class MADDPG:

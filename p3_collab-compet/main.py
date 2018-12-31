@@ -19,8 +19,7 @@ def main():
     number_of_agents = 2
     # number of training episodes.
     # change this to higher number to experiment. say 30000.
-    number_of_episodes = 5000
-    max_t = 1000
+    number_of_episodes = 10000
     batchsize = 128
     
     # amplitude of OU noise
@@ -31,7 +30,7 @@ def main():
     tau = 1e-3   # soft update factor
     gamma = 0.99 # reward discount factor
 
-    print_every = 1
+    print_every = 100
     # how many episodes before update
     episode_per_update = 2
 
@@ -66,8 +65,6 @@ def main():
         for agent in maddpg.maddpg_agent:
             agent.noise.reset()
 
-        episode_n = 0
-
         while True:
             actions = maddpg.act(torch.tensor(states, dtype=torch.float), noise=noise)
 
@@ -86,15 +83,13 @@ def main():
             states_full = np.copy(next_states_full)
 
             # update once after every episode_per_update
-            if len(buffer) > batchsize and episode>0 and episode % episode_per_update==0:
+            if len(buffer) > batchsize:
                 for a_i in range(number_of_agents):
                     samples = buffer.sample(batchsize)
                     maddpg.update(samples, a_i)
 
             if np.any(dones):
                 break
-
-            episode_n += 1
 
         agent0_reward.append(reward_this_episode[0, 0])
         agent1_reward.append(reward_this_episode[0, 1])
@@ -105,13 +100,12 @@ def main():
         cur_score = np.mean(scores_window)
         ep_scores.append(cur_score)
         
-
         save_dict_list =[]
-
-        if episode % print_every == 0 or avg_rewards > -1.0:
-            print('\rEpisode: {}, Episode Length: {}, Average score: {:.5f}, noise: {:.5f}'.format(episode, episode_n, cur_score, noise))
+     
+        if episode % print_every == 0.0 or avg_rewards > 2.5:
+            print('\rEpisode: {}, Average score: {:.5f}, noise: {:.5f}'.format(episode, cur_score, noise))    
             
-            if avg_rewards > -1.0:
+            if avg_rewards > 2.5:
                 for i in range(number_of_agents):
                     save_dict = {'actor_params' : maddpg.maddpg_agent[i].actor.state_dict(),
                                  'actor_optim_params': maddpg.maddpg_agent[i].actor_optimizer.state_dict(),
@@ -120,9 +114,9 @@ def main():
                     save_dict_list.append(save_dict)
 
                     torch.save(save_dict_list, 
-                               os.path.join(model_dir, 'episode-{}.pt'.format(episode)))
-                print('model saved, exit training')
-                break
+                               os.path.join(model_dir, 'episode-{}-{}.pt'.format(episode, cur_score)))
+                print('model saved')
+                
     env.close()
 
 if __name__=='__main__':
