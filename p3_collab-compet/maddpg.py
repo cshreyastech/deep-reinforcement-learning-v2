@@ -7,7 +7,8 @@ import torch
 import torch.nn.functional as F
 
 from utilities import soft_update, transpose_to_tensor
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 
 class MADDPG:
     def __init__(self, num_agents, num_states, num_actions, discount_factor=0.99, tau=1e-3):

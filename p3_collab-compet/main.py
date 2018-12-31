@@ -8,6 +8,7 @@ import torch
 import numpy as np
 import os
 from collections import deque
+import matplotlib.pyplot as plt
 
 def seeding(seed=1):
     np.random.seed(seed)
@@ -19,7 +20,7 @@ def main():
     number_of_agents = 2
     # number of training episodes.
     # change this to higher number to experiment. say 30000.
-    number_of_episodes = 10000
+    number_of_episodes = 3000
     batchsize = 128
     
     # amplitude of OU noise
@@ -34,8 +35,11 @@ def main():
     # how many episodes before update
     episode_per_update = 2
 
-    model_dir= os.getcwd()+"/model_dir"
-    os.makedirs(model_dir, exist_ok=True)
+    #model_dir= os.getcwd()+"/model_dir"
+    #os.makedirs(model_dir, exist_ok=True)
+
+    result_dir= os.getcwd()+"/result_dir"
+    os.makedirs(result_dir, exist_ok=True)
 
     # do we need to set multi-thread for this env?
     torch.set_num_threads(number_of_agents*2)
@@ -105,6 +109,7 @@ def main():
         if episode % print_every == 0.0 or avg_rewards > 2.5:
             print('\rEpisode: {}, Average score: {:.5f}, noise: {:.5f}'.format(episode, cur_score, noise))    
             
+            
             if avg_rewards > 2.5:
                 for i in range(number_of_agents):
                     save_dict = {'actor_params' : maddpg.maddpg_agent[i].actor.state_dict(),
@@ -116,8 +121,16 @@ def main():
                     torch.save(save_dict_list, 
                                os.path.join(model_dir, 'episode-{}-{}.pt'.format(episode, cur_score)))
                 print('model saved')
-                
+            break
     env.close()
+
+    #print('main-ep_scores: ', ep_scores)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.plot(np.arange(1, len(ep_scores)+1), ep_scores)
+    plt.ylabel('Score')
+    plt.xlabel('Episode #')
+    fig.savefig(result_dir + '/score_plot.png')
 
 if __name__=='__main__':
     main()

@@ -11,8 +11,8 @@ import numpy as np
 # add OU noise for exploration
 from OUNoise import OUNoise
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 class DDPGAgent:
     def __init__(self, in_actor, out_actor, in_critic, lr_actor=1.0e-4, lr_critic=1.0e-3):
         super(DDPGAgent, self).__init__()

@@ -4,7 +4,8 @@ from utilities import transpose_list
 import torch
 import numpy as np
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 
 class ReplayBuffer:
     def __init__(self,size):
